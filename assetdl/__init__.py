@@ -1,4 +1,4 @@
 APP_NAME = "CSR2 Asset Downloader"
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 AUTHOR = "BonkOfEngland"
 REPO = "BonkOfEngland/csr2_asset_downloader_gui"
