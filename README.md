@@ -4,7 +4,7 @@ Download CSR2 car bundles, global libraries and scenes.
 
 ## Download
 
-Get the latest version from [Releases](https://github.com/BonkOfEngland/csr2_asset_downloader/releases/latest):
+Get the latest version from [Releases](https://github.com/BonkOfEngland/csr2_asset_downloader_gui/releases/latest):
 
 | System | File |
 |---|---|

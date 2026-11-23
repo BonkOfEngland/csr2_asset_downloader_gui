@@ -143,11 +143,22 @@ class WindowTests(unittest.TestCase):
         cls.app = QApplication.instance() or QApplication([])
         cls.app.setStyleSheet(theme.QSS)
 
+    @classmethod
+    def tearDownClass(cls):
+        from PySide6.QtCore import QEvent, QThreadPool
+        from PySide6.QtWidgets import QApplication
+        QThreadPool.globalInstance().waitForDone(5000)
+        for widget in QApplication.topLevelWidgets():
+            widget.close()
+            widget.deleteLater()
+        QApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        cls.app.processEvents()
+
     def test_main_window_and_dialogs(self):
         from assetdl.ui.main_window import MainWindow
         from assetdl.ui.setup import SetupDialog
         from assetdl.ui.splash import Splash
-        settings = Settings(setup_done=True)
+        settings = Settings(check_updates=False, setup_done=True)
         session = Session()
         session.warnings.append("offline in tests")
         window = MainWindow(settings, session)
@@ -166,7 +177,7 @@ class WindowTests(unittest.TestCase):
         session.keys = A.car_keys(db)
         session.catalog.add_keys(session.keys)
         with tempfile.TemporaryDirectory() as tmp:
-            window = MainWindow(Settings(setup_done=True, save_dir=tmp), session)
+            window = MainWindow(Settings(check_updates=False, setup_done=True, save_dir=tmp), session)
             self.assertEqual(len(window.lib_table.rows), 3)
             self.assertEqual(len(window.scene_table.rows), 2)
             self.assertEqual(len(window.lib_table.checked_jobs()), 0)
