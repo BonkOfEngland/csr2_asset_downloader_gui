@@ -27,7 +27,7 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
       - name: Nuitka cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cache/Nuitka
@@ -74,7 +74,7 @@ jobs:
           else
             echo "new=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         if: steps.version.outputs.new == 'true'
         with:
           path: release
