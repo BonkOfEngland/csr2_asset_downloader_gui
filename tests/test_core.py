@@ -1,6 +1,3 @@
-"""Offline tests: planning from a small hand-made asset database, files on disk, search, settings, and that the
-windows build. Run: python -m unittest discover -s tests   (QT_QPA_PLATFORM=offscreen without a display)."""
-
 from __future__ import annotations
 
 import os
@@ -14,16 +11,16 @@ sys.path.insert(0, str(ROOT))
 _CONFIG = tempfile.mkdtemp(prefix="csr2assets-test-")
 os.environ["CSR2_ASSETS_CONFIG"] = _CONFIG
 
-from csr2cdn import AssetDatabase  # noqa: E402
+from csr2cdn import AssetDatabase
 
-from assetdl import assets as A  # noqa: E402
-from assetdl.config import Settings  # noqa: E402
-from assetdl.session import NEW, UPCOMING, Catalog, NewCars, Session, apply_new_cars  # noqa: E402
+from assetdl import assets as A
+from assetdl.config import Settings
+from assetdl.session import NEW, UPCOMING, Catalog, NewCars, Session, apply_new_cars
 
 
 def make_db() -> AssetDatabase:
     db = AssetDatabase.from_json([{"branch_name": "6_9_0_Release", "version": "100"}, []])
-    add = lambda code, deps=(), size=10, version="3": db.add_asset(  # noqa: E731
+    add = lambda code, deps=(), size=10, version="3": db.add_asset(
         code, version=version, dependencies=list(deps), sizes={"High": size, "ASTC": size})
     add("Ferrari_296Speciale_2026_shared1", size=100)
     add("Ferrari_296Speciale_2026_Wheel_1_shared2")
@@ -58,7 +55,7 @@ class PlanTests(unittest.TestCase):
         self.assertIn("Ferrari_296Speciale_2026_shared1", shared)
         self.assertIn("Ferrari_296Speciale_2026_Wheel_1_shared2", shared)
         self.assertNotIn("CarPaintLibrary", shared)
-        self.assertNotIn("Ferrari_296Speciale_2026_common", shared)     # the base car's own visuals
+        self.assertNotIn("Ferrari_296Speciale_2026_common", shared)
         self.assertNotIn("Ferrari_296Speciale_2026_icon", shared)
 
     def test_plan_unknown_car(self):
@@ -83,7 +80,7 @@ class FileTests(unittest.TestCase):
             self.assertEqual(A.file_state(folder, asset), A.MISSING)
             (folder / "CarPaintLibrary.ASTC.2").write_bytes(b"old")
             self.assertEqual(A.file_state(folder, asset), A.UPDATE)
-            (folder / asset.filename()).write_bytes(b"x" * 49)              # wrong size
+            (folder / asset.filename()).write_bytes(b"x" * 49)
             self.assertEqual(A.file_state(folder, asset), A.UPDATE)
             (folder / asset.filename()).write_bytes(b"x" * 50)
             self.assertEqual(A.file_state(folder, asset), A.CURRENT)
@@ -139,8 +136,6 @@ class SettingsTests(unittest.TestCase):
 
 
 class WindowTests(unittest.TestCase):
-    """The windows build without a connection (no network: the session is never loaded)."""
-
     @classmethod
     def setUpClass(cls):
         from PySide6.QtWidgets import QApplication
@@ -158,7 +153,7 @@ class WindowTests(unittest.TestCase):
         window = MainWindow(settings, session)
         for i in range(5):
             window._nav(i)
-        self.assertEqual(window.new_stack.currentIndex(), 0)        # locked without a Player ID
+        self.assertEqual(window.new_stack.currentIndex(), 0)
         window.close()
         SetupDialog(Settings()).close()
         Splash().close()
@@ -174,10 +169,10 @@ class WindowTests(unittest.TestCase):
             window = MainWindow(Settings(setup_done=True, save_dir=tmp), session)
             self.assertEqual(len(window.lib_table.rows), 3)
             self.assertEqual(len(window.scene_table.rows), 2)
-            self.assertEqual(len(window.lib_table.checked_jobs()), 0)     # nothing pre-selected
+            self.assertEqual(len(window.lib_table.checked_jobs()), 0)
             window.lib_table.check("needed")
-            self.assertEqual(len(window.lib_table.checked_jobs()), 3)     # Select needed: the missing ones
-            self.assertEqual(len(window.scene_table.checked_jobs()), 0)   # scenes are big: none by default
+            self.assertEqual(len(window.lib_table.checked_jobs()), 3)
+            self.assertEqual(len(window.scene_table.checked_jobs()), 0)
             window.search.setText("296SpecialeReward")
             window._run_search()
             window.list.setCurrentIndex(window.model.index(0))

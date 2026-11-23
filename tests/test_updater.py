@@ -1,5 +1,3 @@
-"""The updater, with GitHub faked: version checks, picking this system's file, the download checks and the swap."""
-
 from __future__ import annotations
 
 import hashlib
@@ -16,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 os.environ.setdefault("CSR2_ASSETS_CONFIG", tempfile.mkdtemp(prefix="csr2assets-test-"))
 
-from assetdl import VERSION, updater as U  # noqa: E402
+from assetdl import VERSION, updater as U
 
 
 class FakeResponse:
@@ -129,7 +127,7 @@ class DownloadTests(unittest.TestCase):
         short.size += 1
         with self.assertRaisesRegex(U.UpdateError, "incomplete"):
             U.download(short, folder=self.tmp, session=FakeSession(FakeResponse(body=body)))
-        self.assertEqual([p.name for p in self.tmp.iterdir()], [])      # nothing left behind
+        self.assertEqual([p.name for p in self.tmp.iterdir()], [])
 
     def test_cancel(self):
         stop = threading.Event()

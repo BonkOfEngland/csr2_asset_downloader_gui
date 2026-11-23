@@ -1,15 +1,3 @@
-"""What to download, worked out from the asset database alone (no names or versions are guessed).
-
-The car planning is ported from csr2_master_renderer's car_download.py. Files go to:
-
-    <save folder>/<CRDB key>/          a car's own bundles and the shared bundles they depend on
-    <save folder>/global_libraries/    CarPaintLibrary, CarInteriorLibrary, ... Localisation_EN
-    <save folder>/scenes/              assets_scene_* (garage, workshop, showroom, tracks ...)
-
-Every file keeps the game's own name, <code>.ASTC.<version>. When an asset is updated, its older copy is moved
-to _old_bundles/ beside it (or deleted), so two versions never sit side by side.
-"""
-
 from __future__ import annotations
 
 import re
@@ -22,18 +10,17 @@ QUALITY = "ASTC"
 LIBRARIES = ("CarPaintLibrary", "CarInteriorLibrary", "CarCalliperLibrary", "CarLiveryLibrary", "CarLiverySetLibrary",
              "LiveryZonesSetLibrary", "CarWrapLibrary", "CarColorLibrary", "CarLicensePlateLibrary",
              "GlobalTextures", "GlobalLiveryTextures",
-             "CarMetadata",                 # the CarDatabase: each car's size class
-             # Tuner Stars (..TNR<n>_<year>) cars: their paint, interior, callipers, liveries, rims and tyres
+             "CarMetadata",
              "CarTunerStarsPaintLibrary", "CarTunerStarsInteriorLibrary", "CarTunerStarsCalliperLibrary",
              "CarTunerStarsLiveryLibrary", "CarTunerStarsLiverySetLibrary", "CarTunerStarsRimLibrary",
              "CarTunerStarsTireLibrary", "TNRGlobalTireTextures", "TNRGlobalLiveryTextures",
-             "Localisation_EN")             # the game's English text: the cars' and brands' names
-LIBRARY_HINTS = ("liveryzones", "liverytextures")      # any asset named like these is a library too (renamed / split)
+             "Localisation_EN")
+LIBRARY_HINTS = ("liveryzones", "liverytextures")
 SCENE_PREFIX = "assets_scene"
 LEGENDS_MANIFEST = "_RestorationManifest"
 
-CAR_KEY = re.compile(r"^[A-Za-z0-9]+_[A-Za-z0-9]+_\d{4}$")          # Make_Model_Year: a CRDB key
-MODEL = re.compile(r"^([A-Za-z0-9]+)_([A-Za-z0-9]+)_(\d{4})_")      # the model a bundle belongs to
+CAR_KEY = re.compile(r"^[A-Za-z0-9]+_[A-Za-z0-9]+_\d{4}$")
+MODEL = re.compile(r"^([A-Za-z0-9]+)_([A-Za-z0-9]+)_(\d{4})_")
 
 LIBRARIES_DIR = "global_libraries"
 SCENES_DIR = "scenes"
@@ -44,15 +31,11 @@ class PlanError(RuntimeError):
     pass
 
 
-# --- libraries and scenes --------------------------------------------------------------------------------------
 def owner_key(code: str) -> str:
-    """The CRDB key a bundle would belong to as an OWN bundle: its first three name parts (Make_Model_Year)."""
     return "_".join(code.split("_")[:3])
 
 
 def library_assets(database) -> list:
-    """The libraries this database has: the known names, plus any asset named like a livery-zone or livery-texture
-    library."""
     found, seen = [], set()
     for name in LIBRARIES:
         asset = database.assets.get(name)
@@ -68,13 +51,11 @@ def library_assets(database) -> list:
 
 
 def scene_assets(database) -> list:
-    """Every assets_scene_* bundle: garage, workshop, showroom, the tracks ..."""
     return sorted((a for a in database.assets if a.code.lower().startswith(SCENE_PREFIX)),
                   key=lambda a: a.code.lower())
 
 
 def scene_label(code: str) -> str:
-    """assets_scene_track_route66_night -> 'Track: Route66 Night'."""
     rest = code[len(SCENE_PREFIX):].strip("_")
     words = rest.split("_")
     if words and words[0].lower() == "track" and len(words) > 1:
@@ -82,10 +63,7 @@ def scene_label(code: str) -> str:
     return " ".join(w.capitalize() for w in words) or code
 
 
-# --- cars --------------------------------------------------------------------------------------------------------
 def car_keys(database) -> List[str]:
-    """Every car in the database: the CRDB key of each <key>_common bundle, and each Legends car (a bare <key>
-    bundle with a <key>_RestorationManifest: no _common)."""
     keys = set()
     codes = {a.code for a in database.assets}
     for asset in database.assets:
@@ -102,8 +80,6 @@ def car_keys(database) -> List[str]:
 
 
 def belongs_to_model(code: str, key: str) -> bool:
-    """A shared bundle of the car's model: same make and year, and the car's model name starts with the bundle's
-    (Ferrari_296Speciale_2026_shared1 belongs to Ferrari_296SpecialeReward_2026)."""
     m = MODEL.match(code)
     k = key.split("_")
     if not m or len(k) != 3:
@@ -113,27 +89,22 @@ def belongs_to_model(code: str, key: str) -> bool:
 
 
 def variant_base(key: str) -> Optional[str]:
-    """The base car of a variant key: Pagani_UtopiaRoadsterRewardRecycled_2024 -> Pagani_UtopiaRoadster_2024."""
     m = re.match(r"^(.+?)(RewardRecycled|Recycled|Reward)(_\d{4})$", key)
     return m.group(1) + m.group(3) if m else None
 
 
 def car_plan(database, key: str, keys: Optional[Iterable[str]] = None) -> Dict[str, list]:
-    """{'own': [...], 'shared': [...]}: the Asset objects a car needs. ``keys`` (car_keys(database)) saves a scan
-    when planning many cars."""
     prefix = key.lower() + "_"
     keys = {k.lower() for k in (keys if keys is not None else car_keys(database))}
     own = [a for a in database.assets.search(key) if a.code.lower().startswith(prefix)]
     if key in database.assets and own and any(a.code.endswith(LEGENDS_MANIFEST) for a in own):
-        own.append(database.assets[key])                # a Legends car's base: the bare <key> bundle
+        own.append(database.assets[key])
     if not own:
         raise PlanError(f"no assets named {key}_... in this asset database")
 
     def model_bundle(code: str) -> bool:
         return not code.lower().startswith(prefix) and belongs_to_model(code, key)
 
-    # 1. what the car's bundles depend on - Unity's own record. Another car's bundles it depends on are needed too
-    #    (wheels, shadows, shared bodies), all but that car's own visuals (_common) and icon.
     shared, seen = [], {a.code for a in own}
     for asset in own:
         for dep in asset.walk_dependencies():
@@ -144,7 +115,6 @@ def car_plan(database, key: str, keys: Optional[Iterable[str]] = None) -> Dict[s
                     and not (other_car and dep.code.lower().endswith(("_common", "_icon")))):
                 seen.add(dep.code)
                 shared.append(dep)
-    # 1b. a variant (..RewardRecycled_2024, ..Reward_2024) is drawn with its BASE car's model
     base = variant_base(key)
     if (base and base.lower() in keys
             and not any(a.code.lower().startswith(base.lower() + "_") for a in shared)):
@@ -154,15 +124,12 @@ def car_plan(database, key: str, keys: Optional[Iterable[str]] = None) -> Dict[s
                     and not code.endswith(("_common", "_icon"))):
                 seen.add(asset.code)
                 shared.append(asset)
-    # 2. no dependencies listed (some builds): the model's bundles by name, leaving out other cars' own bundles
     if not shared:
         for asset in database.assets.search(key.split("_")[0] + "_"):
             other = owner_key(asset.code).lower()
             if asset.code not in seen and model_bundle(asset.code) and not (other in keys and other != key.lower()):
                 seen.add(asset.code)
                 shared.append(asset)
-    # 3. anything else the car's bundles depend on that is not another car, a library or a scene (e.g. the
-    #    textures behind <key>_LiveryAndSwatchTexture)
     skip = {a.code.lower() for a in library_assets(database)}
     for asset in own:
         for dep in asset.walk_dependencies():
@@ -174,13 +141,10 @@ def car_plan(database, key: str, keys: Optional[Iterable[str]] = None) -> Dict[s
     return {"own": sorted(own, key=lambda a: a.code.lower()), "shared": sorted(shared, key=lambda a: a.code.lower())}
 
 
-# --- files on disk -----------------------------------------------------------------------------------------------
 CURRENT, UPDATE, MISSING = "current", "update", "missing"
 
 
 def file_state(folder: Path, asset) -> str:
-    """CURRENT when <code>.ASTC.<version> is there at the database's size, UPDATE when only another version is,
-    else MISSING."""
     folder = Path(folder)
     path = folder / asset.filename(QUALITY)
     if path.is_file():
@@ -200,7 +164,6 @@ def glob_escape(text: str) -> str:
 
 
 def retire_old_versions(folder: Path, asset, keep: bool = True, log: Callable[[str], None] = lambda _m: None) -> None:
-    """Older copies of ``asset`` in ``folder`` go to _old_bundles/ (keep) or are deleted."""
     folder = Path(folder)
     current = asset.filename(QUALITY)
     pattern = re.compile(re.escape(asset.code) + r"\." + QUALITY + r"\.\d+$")

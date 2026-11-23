@@ -1,5 +1,3 @@
-"""The main window: New Cars, Global Libraries, Car Assets, Scenes and Settings."""
-
 from __future__ import annotations
 
 import threading
@@ -32,7 +30,6 @@ TAG_STYLE = {UPCOMING: ("UPCOMING", theme.WARN, "#2a2210"), NEW: ("NEW", theme.A
 STATUS_STYLE = {CURRENT: ("Current", theme.OK), UPDATE: ("Update", theme.WARN), MISSING: ("Missing", theme.MUTED)}
 
 
-# --- car lists -----------------------------------------------------------------------------------------------------
 class CarModel(QAbstractListModel):
     def __init__(self):
         super().__init__()
@@ -123,10 +120,7 @@ def car_list(model: CarModel) -> QListView:
     return view
 
 
-# --- asset tables --------------------------------------------------------------------------------------------------
 class AssetTable(QTreeWidget):
-    """Checkable rows of bundles: name, version, size and whether the file on disk is current."""
-
     COLS = ("Name", "Version", "Size", "Status")
 
     def __init__(self, parent=None):
@@ -142,7 +136,7 @@ class AssetTable(QTreeWidget):
         head.setSectionResizeMode(0, QHeaderView.Stretch)
         for c in (1, 2, 3):
             head.setSectionResizeMode(c, QHeaderView.ResizeToContents)
-        self.rows: list[tuple] = []           # (asset, folder, item)
+        self.rows: list[tuple] = []
         self.itemChanged.connect(lambda *_: self.on_change())
         self.on_change = lambda: None
         self.itemDoubleClicked.connect(self._toggle)
@@ -151,7 +145,6 @@ class AssetTable(QTreeWidget):
         item.setCheckState(0, Qt.Unchecked if item.checkState(0) == Qt.Checked else Qt.Checked)
 
     def set_rows(self, rows, check: str = "needed"):
-        """rows: (asset, folder, display name, tooltip)."""
         self.blockSignals(True)
         self.clear()
         self.rows = []
@@ -213,7 +206,6 @@ def check_bar(table: AssetTable) -> QHBoxLayout:
     return bar
 
 
-# --- window --------------------------------------------------------------------------------------------------------
 class MainWindow(QMainWindow):
     def __init__(self, settings: Settings, session: Session | None = None):
         super().__init__()
@@ -262,7 +254,6 @@ class MainWindow(QMainWindow):
         if self.settings.check_updates:
             QTimer.singleShot(2500, lambda: self.check_updates(manual=False))
 
-    # --- layout pieces --------------------------------------------------------------------------------------------
     SIDEBAR_OPEN, SIDEBAR_SHUT = 206, 64
 
     def _sidebar(self) -> QWidget:
@@ -292,7 +283,7 @@ class MainWindow(QMainWindow):
         self.nav_buttons = []
         for i, (name, icon) in enumerate(PAGES):
             if i == SETTINGS:
-                lay.addStretch(1)       # Settings sits at the bottom
+                lay.addStretch(1)
             b = QPushButton(name)
             b.setObjectName("Nav")
             b.setCheckable(True)
@@ -315,7 +306,6 @@ class MainWindow(QMainWindow):
         return side
 
     def set_sidebar(self, collapsed: bool, animate: bool = False):
-        """Collapse to icons only, or open with names and the logo. Remembered between runs."""
         if collapsed != self.settings.sidebar_collapsed:
             self.settings.sidebar_collapsed = collapsed
             self.settings.save()
@@ -377,7 +367,6 @@ class MainWindow(QMainWindow):
         b.clicked.connect(slot)
         return b
 
-    # New Cars
     def _new_cars_page(self) -> QWidget:
         page, lay = self._page("New Cars", "Cars staged for the next update, and the cars that are new in this "
                                            "game version.")
@@ -386,7 +375,6 @@ class MainWindow(QMainWindow):
         self.new_stack = QStackedWidget()
         lay.addWidget(self.new_stack, 1)
 
-        # locked: no Player ID yet
         lock_wrap = QWidget()
         lw = QVBoxLayout(lock_wrap)
         lw.setContentsMargins(0, 20, 0, 0)
@@ -403,7 +391,7 @@ class MainWindow(QMainWindow):
         desc = label("Which branch the game has staged for its next update is only announced to a player, "
                      "through the game's metadata service. Add your Player ID (the ID the game shows for "
                      "your account) to see upcoming and newly added cars.", "Muted", wrap=True)
-        desc.setMinimumHeight(desc.heightForWidth(560 - 56) + 4)    # (added with an alignment: no height-for-width)
+        desc.setMinimumHeight(desc.heightForWidth(560 - 56) + 4)
         ll.addWidget(desc)
         row = QHBoxLayout()
         self.unlock_edit = QLineEdit()
@@ -416,7 +404,6 @@ class MainWindow(QMainWindow):
         lw.addStretch(1)
         self.new_stack.addWidget(lock_wrap)
 
-        # unlocked
         content = QWidget()
         cl = QVBoxLayout(content)
         cl.setContentsMargins(0, 0, 0, 0)
@@ -484,7 +471,6 @@ class MainWindow(QMainWindow):
         v.addWidget(sub)
         return box, value, sub
 
-    # Global Libraries
     def _libraries_page(self) -> QWidget:
         page, lay = self._page("Global Libraries", "Paint, interior, calliper, livery, wrap, plate and Tuner Stars "
                                                    "libraries, global textures, CarMetadata and Localisation_EN. "
@@ -509,7 +495,6 @@ class MainWindow(QMainWindow):
         lay.addLayout(bar)
         return page
 
-    # Car Assets
     def _cars_page(self) -> QWidget:
         page, lay = self._page("Car Assets")
         self.cars_banner = self._banner()
@@ -569,7 +554,6 @@ class MainWindow(QMainWindow):
         lay.addLayout(bar)
         return page
 
-    # Scenes
     def _scenes_page(self) -> QWidget:
         page, lay = self._page("Scenes", "The game's scene bundles: garage, workshop, showroom, crew hangout and "
                                          "every race track. Saved to scenes/ in your save folder.")
@@ -593,7 +577,6 @@ class MainWindow(QMainWindow):
         lay.addLayout(bar)
         return page
 
-    # Settings
     def _settings_page(self) -> QWidget:
         page, lay = self._page("Settings")
         box = card()
@@ -723,7 +706,6 @@ class MainWindow(QMainWindow):
         v.addWidget(bar)
         return wrap
 
-    # --- helpers --------------------------------------------------------------------------------------------------
     def _start(self, task: Task):
         self._tasks.add(task.signals)
         task.signals.done.connect(lambda *_: self._tasks.discard(task.signals))
@@ -780,7 +762,6 @@ class MainWindow(QMainWindow):
             b.setText(text)
             b.setVisible(bool(text))
 
-    # --- session --------------------------------------------------------------------------------------------------
     def reload_session(self):
         if self.busy:
             return
@@ -812,7 +793,7 @@ class MainWindow(QMainWindow):
                 self.log("WARNING (new cars): " + warning)
         self.set_busy(False)
         if not session.ready:
-            if initial and not session.warnings:          # nothing loaded yet (first run): load now
+            if initial and not session.warnings:
                 QTimer.singleShot(0, self.reload_session)
                 return
             self._show_banner("Couldn't reach the game CDN. " + " ".join(session.warnings[:2])
@@ -843,7 +824,6 @@ class MainWindow(QMainWindow):
         for table in (self.lib_table, self.scene_table, self.car_table):
             table.refresh_status()
 
-    # --- New Cars -------------------------------------------------------------------------------------------------
     def _update_new_page(self):
         if not self.settings.player_id:
             self.new_stack.setCurrentIndex(0)
@@ -913,7 +893,7 @@ class MainWindow(QMainWindow):
         if self.busy or not self.session.ready:
             return
         if not self.session.has_player_id:
-            self.reload_session()                # the CDN client needs the Player ID attached: reconnect
+            self.reload_session()
             return
         self.set_busy(True)
         self.log("Checking for new cars …")
@@ -935,7 +915,6 @@ class MainWindow(QMainWindow):
         self._run_search()
         self._update_new_page()
 
-    # --- Car Assets -----------------------------------------------------------------------------------------------
     def _run_search(self):
         cat = self.session.catalog
         self.model.show_crdb = self.settings.show_crdb
@@ -1005,7 +984,6 @@ class MainWindow(QMainWindow):
         self._download_cars(cars, self.car_libs.isChecked())
 
     def _library_jobs(self, database=None) -> list[Job]:
-        """The libraries of ``database`` (an upcoming car's: the staged ones, which may be newer)."""
         folder = self.settings.root / LIBRARIES_DIR
         return [Job(a, folder) for a in library_assets(database or self.session.database)]
 
@@ -1033,7 +1011,6 @@ class MainWindow(QMainWindow):
         cars = self._selected_cars(self.list)
         self.open_folder(self.settings.root / cars[0].crdb if len(cars) == 1 else self.settings.root)
 
-    # --- downloading ----------------------------------------------------------------------------------------------
     def _download(self, jobs: list[Job], title: str):
         if self.busy or not self.session.ready:
             return
@@ -1089,7 +1066,6 @@ class MainWindow(QMainWindow):
         self.cancel_btn.setEnabled(False)
         self.set_status("Cancelling …")
 
-    # --- settings -------------------------------------------------------------------------------------------------
     def _set_show_crdb(self, on: bool):
         self.settings.show_crdb = on
         self.settings.save()
@@ -1124,7 +1100,6 @@ class MainWindow(QMainWindow):
         self.settings.workers = self.workers.currentData()
         self.settings.save()
 
-    # --- updates --------------------------------------------------------------------------------------------------
     def _set_check_updates(self, on: bool):
         self.settings.check_updates = on
         self.settings.save()

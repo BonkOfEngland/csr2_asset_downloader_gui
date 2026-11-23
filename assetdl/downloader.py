@@ -1,6 +1,3 @@
-"""Downloading a list of bundles: in parallel, with byte progress, skipping what's already current, and moving
-older versions aside afterwards."""
-
 from __future__ import annotations
 
 import os
@@ -19,7 +16,7 @@ class Cancelled(Exception):
 
 @dataclass
 class Job:
-    asset: object                 # csr2cdn Asset
+    asset: object
     folder: Path
 
 
@@ -50,7 +47,6 @@ def dedupe(jobs: List[Job]) -> List[Job]:
 
 
 def _fetch(cdn, job: Job, add_bytes: Callable[[int], None], stop: threading.Event) -> str:
-    """Stream one bundle to <folder>/<code>.ASTC.<version> through a .part file."""
     if stop.is_set():
         raise Cancelled()
     asset, folder = job.asset, Path(job.folder)
@@ -128,7 +124,7 @@ def run_jobs(cdn, jobs: List[Job], *, workers: int = 8, keep_old: bool = True,
                     name = future.result()
                 except Cancelled:
                     continue
-                except Exception as exc:                # noqa: BLE001 - reported per file
+                except Exception as exc:
                     summary.failed[job.asset.code] = str(exc) or type(exc).__name__
                     log(f"FAILED {job.asset.code}: {summary.failed[job.asset.code]}")
                     continue

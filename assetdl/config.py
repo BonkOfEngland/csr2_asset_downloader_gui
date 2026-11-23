@@ -1,12 +1,3 @@
-"""Settings, and where the app keeps its files.
-
-Settings live in the user's config folder, so they survive replacing the .exe:
-    Windows:  %APPDATA%\\CSR2 Asset Downloader\\settings.json
-    Linux:    ~/.config/csr2-asset-downloader/settings.json
-    macOS:    ~/Library/Application Support/CSR2 Asset Downloader/settings.json
-The cache (asset databases, the car names, the last branch that worked) lives next to it, in cache/.
-"""
-
 from __future__ import annotations
 
 import json
@@ -22,16 +13,14 @@ WORKER_CHOICES = (2, 4, 8, 12, 16)
 
 
 def app_dir() -> Path:
-    """The folder the app runs from: next to the .exe when packaged, else the project folder."""
-    if getattr(sys, "frozen", False):                  # PyInstaller
+    if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
-    if "__compiled__" in globals():                    # Nuitka: argv[0] is the .exe, even for onefile
+    if "__compiled__" in globals():
         return Path(sys.argv[0]).resolve().parent
     return Path(__file__).resolve().parents[1]
 
 
 def resource(name: str) -> Path:
-    """A file bundled with the app (assets/...)."""
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
     return base / "assets" / name
 
@@ -56,7 +45,6 @@ def cache_dir() -> Path:
 
 
 def default_save_dir() -> str:
-    # next to the program, like the other tools; a Mac .app can't hold files, so there it's ~/Documents
     if sys.platform == "darwin" and ".app/Contents/" in app_dir().as_posix() + "/":
         return str(Path.home() / "Documents" / "CSR2 Assets")
     return str(app_dir() / "CSR2 Assets")
@@ -65,14 +53,14 @@ def default_save_dir() -> str:
 @dataclass
 class Settings:
     setup_done: bool = False
-    show_crdb: bool = False            # list cars by CRDB name instead of their in-game name
-    save_dir: str = ""                 # <save_dir>/<CRDB key>/, global_libraries/, scenes/
-    player_id: str = ""                # unlocks New Cars (the announced branches) and the live branch
-    keep_old: bool = True              # an updated bundle's older copy goes to _old_bundles/ (else deleted)
-    workers: int = 8                   # downloads at once
+    show_crdb: bool = False
+    save_dir: str = ""
+    player_id: str = ""
+    keep_old: bool = True
+    workers: int = 8
     sidebar_collapsed: bool = False
-    check_updates: bool = True         # look for a newer release on GitHub at start
-    skipped_version: str = ""          # "Skip this version" in the update dialog
+    check_updates: bool = True
+    skipped_version: str = ""
 
     def __post_init__(self):
         if not self.save_dir:

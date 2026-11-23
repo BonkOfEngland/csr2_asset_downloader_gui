@@ -1,7 +1,3 @@
-"""Start-up splash, in the style of the CSR2 Workshop one: the CSR2 logo with ASSETS under it,
-a thin red progress bar with what it's doing, and the credits along the bottom
-(assets/csr2_logo.png, bonk_logo.png, nitro4csr.png)."""
-
 from __future__ import annotations
 
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, QTimer
@@ -15,8 +11,6 @@ from assetdl.ui.widgets import credit
 
 
 class Wordmark(QWidget):
-    """assets/brand.png: the CSR2 logo with ASSETS spanning its width (a drawn one if it's missing)."""
-
     HEIGHT = 172
 
     def __init__(self, parent=None):
@@ -44,7 +38,6 @@ class Wordmark(QWidget):
         p.setFont(big)
         p.setPen(QColor(theme.TEXT))
         p.drawText(QRectF(0, 0, r.width(), 100), Qt.AlignHCenter | Qt.AlignBottom, "CSR2")
-        # red underline stroke
         p.setPen(Qt.NoPen)
         p.setBrush(QColor(theme.ACCENT))
         stroke = QPainterPath()
@@ -108,7 +101,6 @@ class Splash(QWidget):
         p.fillPath(path, QColor("#0d0d0d"))
         p.setPen(QColor(theme.BORDER))
         p.drawPath(path)
-        # faint red glow at the top edge
         p.setPen(Qt.NoPen)
         p.setBrush(QColor(theme.ACCENT))
         p.drawRoundedRect(QRectF(self.W / 2 - 60, 0, 120, 3), 1.5, 1.5)
@@ -126,8 +118,6 @@ class Splash(QWidget):
         anim = self._fade(1.0, 0.0, 220)
         anim.finished.connect(self.close)
         if then:
-            # Not straight from the animation's signal: ``then`` may open a dialog with its own event
-            # loop, and Qt's animations can't run while one animation's callback is still in progress.
             anim.finished.connect(lambda: QTimer.singleShot(0, then))
 
     def _fade(self, start, end, ms):

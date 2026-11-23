@@ -1,11 +1,3 @@
-"""CSR2 Asset Downloader.
-
-Start-up: splash (connects to the game CDN) -> first-run setup if needed -> main window.
-
-Run from source:   python app.py
-Build:             python build_nuitka.py   (or build_nuitka_linux.sh / build_nuitka_windows.bat)
-"""
-
 from __future__ import annotations
 
 import sys
@@ -24,10 +16,10 @@ SPLASH_MIN_SECONDS = 1.4
 
 def main() -> int:
     if sys.platform == "win32":
-        try:                                           # own taskbar icon instead of python's
+        try:
             import ctypes
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(f"BonkOfEngland.{APP_NAME}")
-        except Exception:                               # noqa: BLE001
+        except Exception:
             pass
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
@@ -48,8 +40,8 @@ def main() -> int:
 
     from assetdl import updater
     try:
-        updater.cleanup()                              # the previous version's leftovers after an update
-    except Exception:                                  # noqa: BLE001
+        updater.cleanup()
+    except Exception:
         pass
 
     settings = Settings.load()
@@ -68,7 +60,7 @@ def main() -> int:
             if SetupDialog(settings).exec() != SetupDialog.Accepted:
                 app.quit()
                 return
-            open_main(None)                            # first run: connects once the window is up
+            open_main(None)
         else:
             open_main(state.get("session"))
 

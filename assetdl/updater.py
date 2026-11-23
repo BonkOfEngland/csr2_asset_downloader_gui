@@ -1,21 +1,3 @@
-"""Updates from the GitHub Releases the build workflow publishes.
-
-    check()      the latest release (api.github.com/repos/<REPO>/releases/latest) -> UpdateInfo, or None when this
-                 is already the newest version
-    download()   the file for this system, checked against the size and SHA-256 digest GitHub reports
-    install()    swaps the running program for the new one and starts it
-
-Release files have fixed names (see .github/workflows/build.yml), so the app always knows which one is its own:
-    Windows  CSR2-Asset-Downloader-windows.exe
-    Linux    CSR2-Asset-Downloader-linux-x86_64.tar.gz   (holds the program "CSR2 Asset Downloader")
-
-Swapping a running program:
-    Linux    the new file is renamed over the old one (the running copy keeps its now-unlinked file)
-    Windows  a running .exe can't be overwritten but can be renamed: it becomes "<name>.exe.old" and is deleted
-             on the next start
-Running from source there is nothing to swap; the app offers the release page instead.
-"""
-
 from __future__ import annotations
 
 import hashlib
@@ -35,9 +17,9 @@ from assetdl import APP_NAME, REPO, VERSION
 API = "https://api.github.com/repos/{repo}/releases/latest"
 WINDOWS_ASSET = "CSR2-Asset-Downloader-windows.exe"
 LINUX_ASSET = "CSR2-Asset-Downloader-linux-x86_64.tar.gz"
-LINUX_MEMBER = APP_NAME                      # the program inside the Linux tar
+LINUX_MEMBER = APP_NAME
 OLD_SUFFIX = ".old"
-UNPACK_DIR_NAME = "CSR2AssetDownloader"      # build_nuitka.py's --onefile-tempdir-spec folder
+UNPACK_DIR_NAME = "CSR2AssetDownloader"
 USER_AGENT = f"CSR2-Asset-Downloader/{VERSION}"
 
 
@@ -51,18 +33,17 @@ class Cancelled(UpdateError):
 
 @dataclass
 class UpdateInfo:
-    version: str                 # "1.2.0"
-    tag: str                     # "v1.2.0"
-    notes: str                   # the release text (Markdown)
-    page_url: str                # the release on github.com
-    asset_name: str = ""         # this system's file, "" when the release has none
+    version: str
+    tag: str
+    notes: str
+    page_url: str
+    asset_name: str = ""
     asset_url: str = ""
     size: int = 0
-    sha256: str = ""             # from GitHub's asset digest, when it reports one
+    sha256: str = ""
 
 
 def parse_version(text: str) -> tuple:
-    """'v1.2.10' -> (1, 2, 10). Anything after the numbers (-beta, +build) is ignored."""
     m = re.match(r"^\s*v?(\d+(?:\.\d+)*)", str(text or ""))
     if not m:
         return ()
@@ -111,13 +92,11 @@ def _session():
 
 
 def check(timeout: float = 10.0, session=None) -> Optional[UpdateInfo]:
-    """The latest release when it is newer than this version, else None. Raises UpdateError when GitHub can't be
-    asked (offline, rate limited, no releases yet)."""
     s = session or _session()
     try:
         r = s.get(API.format(repo=REPO), timeout=timeout,
                   headers={"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"})
-    except Exception as exc:                                   # noqa: BLE001
+    except Exception as exc:
         raise UpdateError(f"couldn't reach GitHub ({type(exc).__name__})") from exc
     if r.status_code == 404:
         raise UpdateError("no releases have been published yet")
@@ -129,14 +108,11 @@ def check(timeout: float = 10.0, session=None) -> Optional[UpdateInfo]:
     return info if is_newer(info.version) else None
 
 
-# --- the running program --------------------------------------------------------------------------------------------
 def compiled() -> bool:
-    """True in a Nuitka build (every compiled module gets __compiled__)."""
     return "__compiled__" in globals()
 
 
 def executable() -> Optional[Path]:
-    """The program file to replace: the Nuitka onefile .exe / binary (sys.argv[0]). None when running from source."""
     if not compiled():
         return None
     path = Path(sys.argv[0]).resolve()
@@ -144,7 +120,6 @@ def executable() -> Optional[Path]:
 
 
 def can_self_update() -> tuple[bool, str]:
-    """(possible, why not)."""
     exe = executable()
     if exe is None:
         return False, "Running from source: update with git pull, or download the release."
@@ -155,11 +130,8 @@ def can_self_update() -> tuple[bool, str]:
     return True, ""
 
 
-# --- download -------------------------------------------------------------------------------------------------------
 def download(info: UpdateInfo, report: Optional[Callable[[int, int], None]] = None,
              stop: Optional[threading.Event] = None, folder: Optional[Path] = None, session=None) -> Path:
-    """Downloads this system's file next to the program (same drive, so the swap is a rename) and returns the
-    ready-to-run new program."""
     if not info.asset_url:
         raise UpdateError(f"release {info.tag} has no {asset_name_for() or 'file for this system'}")
     report = report or (lambda done, total: None)
@@ -203,7 +175,7 @@ def _unpack(part: Path, info: UpdateInfo, folder: Path) -> Path:
                            if m.isfile() and Path(m.name).name == LINUX_MEMBER), None)
             if member is None:
                 raise UpdateError(f"{info.asset_name} doesn't contain {LINUX_MEMBER}")
-            with tar.extractfile(member) as src, open(new, "wb") as dst:   # only this one file, by name
+            with tar.extractfile(member) as src, open(new, "wb") as dst:
                 shutil.copyfileobj(src, dst)
         part.unlink(missing_ok=True)
     else:
@@ -213,9 +185,7 @@ def _unpack(part: Path, info: UpdateInfo, folder: Path) -> Path:
     return new
 
 
-# --- install --------------------------------------------------------------------------------------------------------
 def install(new: Path, exe: Optional[Path] = None) -> Path:
-    """Puts ``new`` where the program is. Returns the program's path."""
     exe = exe or executable()
     if exe is None:
         raise UpdateError("not running as a built app")
@@ -224,13 +194,13 @@ def install(new: Path, exe: Optional[Path] = None) -> Path:
         if old.exists():
             try:
                 old.unlink()
-            except OSError:                                    # still locked: pick another name
+            except OSError:
                 old = exe.with_name(f"{exe.name}{OLD_SUFFIX}{os.getpid()}")
-        os.replace(exe, old)                                   # a running .exe can be renamed
+        os.replace(exe, old)
         try:
             os.replace(new, exe)
         except OSError:
-            os.replace(old, exe)                               # put it back
+            os.replace(old, exe)
             raise
     else:
         os.replace(new, exe)
@@ -238,19 +208,16 @@ def install(new: Path, exe: Optional[Path] = None) -> Path:
 
 
 def restart(exe: Path) -> None:
-    """Starts the (new) program on its own; the caller then quits."""
     env = {k: v for k, v in os.environ.items() if not k.startswith("NUITKA_")}
     kwargs = {"env": env, "close_fds": True, "cwd": str(exe.parent)}
     if sys.platform == "win32":
-        kwargs["creationflags"] = 0x00000008 | 0x00000200      # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+        kwargs["creationflags"] = 0x00000008 | 0x00000200
     else:
         kwargs["start_new_session"] = True
     subprocess.Popen([str(exe)], **kwargs)
 
 
 def cleanup() -> None:
-    """On start: the previous version's leftovers - the renamed .exe on Windows, and older versions' unpacked
-    files in the cache folder."""
     exe = executable()
     if exe is None:
         return
@@ -264,7 +231,7 @@ def cleanup() -> None:
             stray.unlink()
         except OSError:
             pass
-    here = Path(__file__).resolve().parents[1]            # <cache>/CSR2AssetDownloader/<version>
+    here = Path(__file__).resolve().parents[1]
     if here.parent.name != UNPACK_DIR_NAME or here.name != VERSION:
         return
     for other in here.parent.iterdir():

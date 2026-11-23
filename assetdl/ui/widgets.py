@@ -1,5 +1,3 @@
-"""Small shared widgets."""
-
 from __future__ import annotations
 
 from PySide6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, Qt, QTimer, Signal
@@ -15,7 +13,6 @@ _PIX: dict = {}
 
 
 def asset_pixmap(name: str, height: int) -> QPixmap | None:
-    """assets/<name> scaled to ``height`` logical pixels (sharp on high-DPI screens), or None."""
     ratio = QGuiApplication.instance().devicePixelRatio() if QGuiApplication.instance() else 1.0
     key = (name, height, ratio)
     if key not in _PIX:
@@ -31,7 +28,6 @@ def asset_pixmap(name: str, height: int) -> QPixmap | None:
 
 
 def credit(icon: str, html: str, size: int = 18, style: str = "") -> QWidget:
-    """A small round logo followed by text, e.g. the 'made by' line."""
     w = QWidget()
     lay = QHBoxLayout(w)
     lay.setContentsMargins(0, 0, 0, 0)
@@ -63,8 +59,6 @@ def card() -> QFrame:
 
 
 class Choice(QPushButton):
-    """A big checkable option: title, description and an example line."""
-
     def __init__(self, title: str, text: str, example: str = "", parent=None):
         super().__init__(parent)
         self.setObjectName("Choice")
@@ -113,8 +107,6 @@ class FolderPicker(QWidget):
 
 
 class Switch(QPushButton):
-    """A small on/off toggle."""
-
     def __init__(self, checked: bool = False, parent=None):
         super().__init__(parent)
         self.setCheckable(True)
@@ -136,8 +128,6 @@ class Switch(QPushButton):
 
 
 class Segmented(QWidget):
-    """Two or more joined toggle buttons; emits the chosen key."""
-
     picked = Signal(str)
 
     def __init__(self, options: list[tuple[str, str]], parent=None):
@@ -170,12 +160,6 @@ class Segmented(QWidget):
 
 
 class SlideStack(QStackedWidget):
-    """A stacked widget that slides the new page in sideways.
-
-    The page switches straight away; the slide is only decoration, so if the animation can't run
-    for any reason the right page is still shown (and a timer puts it in place regardless).
-    """
-
     DURATION = 260
 
     def slide_to(self, index: int):
@@ -203,7 +187,7 @@ def _draw_icon(kind: str, colour: str, size: int = 36) -> QPixmap:
     pix.fill(Qt.transparent)
     p = QPainter(pix)
     p.setRenderHint(QPainter.Antialiasing)
-    p.scale(size / 24, size / 24)                 # draw on a 24x24 grid
+    p.scale(size / 24, size / 24)
     pen = QPen(QColor(colour), 2.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
     p.setPen(pen)
     p.setBrush(Qt.NoBrush)
@@ -224,7 +208,7 @@ def _draw_icon(kind: str, colour: str, size: int = 36) -> QPixmap:
             a = math.radians(i * 45)
             p.drawLine(QPointF(12 + 6.5 * math.cos(a), 12 + 6.5 * math.sin(a)),
                        QPointF(12 + 9.5 * math.cos(a), 12 + 9.5 * math.sin(a)))
-    elif kind == "badge":                         # New Cars: a scalloped "new" badge with a plus
+    elif kind == "badge":
         import math
         path = QPainterPath()
         for i in range(25):
@@ -235,7 +219,7 @@ def _draw_icon(kind: str, colour: str, size: int = 36) -> QPixmap:
         p.drawPath(path)
         p.drawLine(QPointF(12, 8.5), QPointF(12, 15.5))
         p.drawLine(QPointF(8.5, 12), QPointF(15.5, 12))
-    elif kind == "stack":                         # Global Libraries: stacked layers
+    elif kind == "stack":
         for dy in (0, 4.5, 9):
             path = QPainterPath()
             path.moveTo(12, 3.5 + dy)
@@ -244,7 +228,7 @@ def _draw_icon(kind: str, colour: str, size: int = 36) -> QPixmap:
             path.lineTo(3.5, 7.5 + dy)
             path.closeSubpath()
             p.drawPath(path)
-    elif kind == "car":                           # Car Assets: a side-on car
+    elif kind == "car":
         body = QPainterPath()
         body.moveTo(2.5, 16)
         body.lineTo(2.5, 12.5)
@@ -260,7 +244,7 @@ def _draw_icon(kind: str, colour: str, size: int = 36) -> QPixmap:
         p.drawLine(QPointF(9.5, 16), QPointF(14.5, 16))
         p.drawEllipse(QRectF(5, 14, 4, 4))
         p.drawEllipse(QRectF(15, 14, 4, 4))
-    elif kind == "scene":                         # Scenes: a framed landscape
+    elif kind == "scene":
         p.drawRoundedRect(QRectF(3, 4.5, 18, 15), 2.5, 2.5)
         p.drawPolyline([QPointF(3.5, 17), QPointF(9, 11), QPointF(13, 15), QPointF(15.5, 12.5),
                         QPointF(20.5, 17)])
@@ -275,7 +259,6 @@ def _draw_icon(kind: str, colour: str, size: int = 36) -> QPixmap:
 
 
 def nav_icon(kind: str, checkable: bool = True) -> QIcon:
-    """A sidebar icon: grey normally, white when the page is selected."""
     icon = QIcon()
     icon.addPixmap(_draw_icon(kind, theme.MUTED), QIcon.Normal, QIcon.Off)
     icon.addPixmap(_draw_icon(kind, theme.TEXT), QIcon.Active, QIcon.Off)

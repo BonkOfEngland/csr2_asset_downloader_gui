@@ -1,5 +1,3 @@
-"""Background work without freezing the window."""
-
 from __future__ import annotations
 
 import traceback
@@ -14,8 +12,6 @@ class Signals(QObject):
 
 
 class Task(QRunnable):
-    """Runs ``fn(report, *args)``; ``report(x)`` emits ``progress``. Result -> ``done``."""
-
     def __init__(self, fn, *args):
         super().__init__()
         self.fn, self.args = fn, args
@@ -26,7 +22,7 @@ class Task(QRunnable):
         def safe(signal, *args):
             try:
                 signal.emit(*args)
-            except RuntimeError:          # the window closed while this was running: nobody to tell
+            except RuntimeError:
                 pass
 
         try:
@@ -36,7 +32,7 @@ class Task(QRunnable):
                 return
             traceback.print_exc()
             safe(self.signals.failed, str(exc))
-        except Exception as exc:              # noqa: BLE001
+        except Exception as exc:
             traceback.print_exc()
             safe(self.signals.failed, str(exc) or type(exc).__name__)
         else:

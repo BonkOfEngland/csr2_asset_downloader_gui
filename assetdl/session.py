@@ -1,15 +1,3 @@
-"""Connecting to the game CDN and building what the pages show.
-
-Everything comes from the game's own CDN through Nitro4CSR's csr2-cdn package:
-  * the current asset database (found by probing the CDN; with a Player ID the branch the game announces is
-    asked for too)
-  * the in-game car names, decoded from the Localisation_EN bundle and cached until it changes
-  * New Cars (Player ID only): the branch the game has staged for its next update (FeatureKillswitches'
-    PreemptiveDownloadDataBranchName) compared with the live one, and the live database compared with the newest
-    one of the previous game version.
-The databases are cached, so the app still opens offline (downloads need the internet, of course).
-"""
-
 from __future__ import annotations
 
 import json
@@ -36,7 +24,6 @@ UPCOMING, NEW = "upcoming", "new"
 
 
 def _fold(text: str) -> str:
-    """Lowercase, accents removed, punctuation and underscores turned into spaces."""
     text = unicodedata.normalize("NFKD", text)
     text = "".join(c for c in text if not unicodedata.combining(c))
     return re.sub(r"[^0-9a-z]+", " ", text.lower()).strip()
@@ -55,14 +42,13 @@ def _write_atomic(path: Path, text: str) -> None:
     os.replace(tmp, path)
 
 
-# --- the car list ------------------------------------------------------------------------------------------------
 @dataclass
 class Car:
     crdb: str
     short: Optional[str] = None
     medium: Optional[str] = None
     long: Optional[str] = None
-    tag: str = ""                       # UPCOMING (staged, not released yet), NEW (this game version) or ""
+    tag: str = ""
     _blob: str = field(default="", repr=False)
 
     @property
@@ -73,7 +59,6 @@ class Car:
         return [n for n in dict.fromkeys((self.medium, self.long, self.short)) if n]
 
     def label(self, show_crdb: bool) -> tuple[str, str]:
-        """(main text, smaller second line) for the lists."""
         game = self.game_name
         if show_crdb or not game:
             return self.crdb, (game or "")
@@ -113,7 +98,6 @@ class Catalog:
         return self._sorted[show_crdb]
 
     def search(self, query: str, show_crdb: bool, cars: Optional[List[Car]] = None) -> List[Car]:
-        """Every word of the query must appear in the car's CRDB name or any of its in-game names."""
         everything = cars if cars is not None else self.sorted(show_crdb)
         folded = _fold(query)
         if not folded:
@@ -127,25 +111,23 @@ class Catalog:
                 exact = folded == _fold(car.crdb) or any(folded == _fold(n) for n in car.names())
                 rank = 0 if exact else 1 if main.startswith(folded) else 2
                 hits.append((rank, car))
-        hits.sort(key=lambda h: h[0])          # stable: keeps the alphabetical order within a rank
+        hits.sort(key=lambda h: h[0])
         return [car for _, car in hits]
 
 
-# --- new cars ----------------------------------------------------------------------------------------------------
 @dataclass
 class NewCars:
     checked: bool = False
-    live_branch: str = ""                 # what the game announces (ExplicitDataBranchName)
-    upcoming_branch: str = ""             # staged for the next update (PreemptiveDownloadDataBranchName)
+    live_branch: str = ""
+    upcoming_branch: str = ""
     upcoming_database: object = None
     upcoming: List[str] = field(default_factory=list)
-    since_branch: str = ""                # the newest branch of the previous game version
+    since_branch: str = ""
     recent: List[str] = field(default_factory=list)
     notes: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
 
 
-# --- the session -------------------------------------------------------------------------------------------------
 class Session:
     def __init__(self):
         self.cdn = None
@@ -156,7 +138,7 @@ class Session:
         self.offline = False
         self.has_player_id = False
         self.warnings: List[str] = []
-        self.notes: List[str] = []         # what was loaded from where, for the log
+        self.notes: List[str] = []
         self._staged_names: Optional[list] = None
 
     @property
@@ -164,16 +146,12 @@ class Session:
         return self.database is not None
 
     def database_for(self, key: str):
-        """The database a car is in: the live one, or the staged one for an upcoming car."""
         if self.new_cars.upcoming_database is not None and key in self.new_cars.upcoming:
             return self.new_cars.upcoming_database
         return self.database
 
 
 def _probe_in_parallel(cdn, workers: int = 10):
-    """Ask the CDN about every branch the probe will try at once instead of one after another (csr2cdn checks its
-    ~15 candidates in turn). The answers are kept for the probe to read, so it makes no requests of its own.
-    Does nothing - the probe then asks as usual - if any of it fails."""
     try:
         from csr2cdn.patterns import successors
         ask = cdn.try_database_version
@@ -193,14 +171,14 @@ def _probe_in_parallel(cdn, workers: int = 10):
         cdn.try_database_version = remembered
         with ThreadPoolExecutor(min(workers, len(candidates)) or 1, thread_name_prefix="cdn-probe") as pool:
             list(pool.map(lambda b: _quietly(remembered, b), candidates))
-    except Exception:                                   # noqa: BLE001 - the probe does it itself
+    except Exception:
         pass
 
 
 def _quietly(fn, *args):
     try:
         return fn(*args)
-    except Exception:                                   # noqa: BLE001
+    except Exception:
         return None
 
 
@@ -211,8 +189,6 @@ def _make_cdn(zid: Optional[str], **pins):
 
 
 def connect(settings: Settings, session: Session, report: Progress) -> None:
-    """session.cdn and session.database, trying: the Player ID route, the probe alone, the last branch that worked,
-    then the last database on disk (offline)."""
     zid = settings.player_id or None
     last_path = cache_dir() / LAST_FILE
     try:
@@ -237,7 +213,7 @@ def connect(settings: Settings, session: Session, report: Progress) -> None:
             branch = cdn.branch
             report(f"Loading the asset database ({branch})", 0.25)
             database = cdn.database
-        except Exception as exc:                        # noqa: BLE001 - shown to the user
+        except Exception as exc:
             session.warnings.append(f"Couldn't connect using {how}: {short_error(exc)}")
             continue
         session.cdn, session.database = cdn, database
@@ -248,14 +224,13 @@ def connect(settings: Settings, session: Session, report: Progress) -> None:
             pv = cdn._product_version or (database.product_version and str(database.product_version))
             _write_atomic(last_path, json.dumps({"branch": branch, "database": str(database.version),
                                                  "product_version": pv or ""}))
-        except Exception:                               # noqa: BLE001
+        except Exception:
             pass
         if i > 0 and zid and attempt_zid is None:
             session.warnings.append("Your Player ID didn't work this time, so New Cars is unavailable. "
                                     "Check it in Settings.")
         return
 
-    # offline: the last database on disk
     db_file = cache_dir() / "cdn" / "databases" / f"asset_database.{last.get('database')}.json"
     if last.get("database") and db_file.is_file():
         from csr2cdn import AssetDatabase
@@ -267,12 +242,11 @@ def connect(settings: Settings, session: Session, report: Progress) -> None:
             session.cdn, session.database, session.offline = cdn, database, True
             session.warnings.append(f"Offline: showing the saved asset database {database.version}. "
                                     "Downloads will fail until the CDN can be reached.")
-        except Exception as exc:                        # noqa: BLE001
+        except Exception as exc:
             session.warnings.append(f"The saved asset database is unreadable: {short_error(exc)}")
 
 
 def _load_names(cdn, database, cached: Optional[dict]) -> tuple[Optional[list], str]:
-    """(records, version) from the database's Localisation_EN, or the cached ones when it's the same version."""
     from csr2cdn.localisation_bundle import decode_localisation_unityfs
     asset = database.assets.get(LOCALISATION_CODE)
     if asset is None:
@@ -300,7 +274,7 @@ def load_names(session: Session, report: Progress) -> None:
             if not cached or cached.get("version") != version:
                 _write_atomic(names_path, json.dumps({"version": version, "records": records}))
                 session.notes.append(f"Car names: {len(records)} from {LOCALISATION_CODE} v{version}")
-        except Exception as exc:                        # noqa: BLE001
+        except Exception as exc:
             session.warnings.append(f"Couldn't update the in-game car names: {short_error(exc)}")
     if records is None and cached:
         records = cached.get("records") or []
@@ -310,8 +284,6 @@ def load_names(session: Session, report: Progress) -> None:
 
 
 def previous_release(cdn, database) -> Optional[tuple[str, str]]:
-    """(branch, database version) of the newest database of the game version before this one, found by probing
-    from its x_y_0 release branch. None when there's nothing to compare with."""
     from csr2cdn import parse_branch
     from csr2cdn.patterns import build_branch
     current = parse_branch(str(database.branch_name or cdn.branch))
@@ -329,13 +301,11 @@ def previous_release(cdn, database) -> Optional[tuple[str, str]]:
 
 
 def find_new_cars(session: Session, report: Progress, frac=(0.7, 0.95)) -> NewCars:
-    """Needs a Player ID (the announced branches come from the metadata service)."""
     cdn, database = session.cdn, session.database
     nc = NewCars(checked=True)
     live = set(session.keys)
     span = frac[1] - frac[0]
 
-    # 1. staged for the next update
     report("Checking for upcoming cars", frac[0])
     try:
         names = cdn.branch_names()
@@ -353,7 +323,6 @@ def find_new_cars(session: Session, report: Progress, frac=(0.7, 0.95)) -> NewCa
                 nc.upcoming_database = staged
                 nc.upcoming = sorted(set(car_keys(staged)) - live)
                 nc.notes.append(f"Staged: {names.preemptive}, database {version}: {len(nc.upcoming)} new car(s)")
-                # their names: the staged Localisation_EN, when it differs from the live one
                 try:
                     a, b = staged.assets.get(LOCALISATION_CODE), database.assets.get(LOCALISATION_CODE)
                     if nc.upcoming and a is not None and (b is None or str(a.version) != str(b.version)):
@@ -361,14 +330,13 @@ def find_new_cars(session: Session, report: Progress, frac=(0.7, 0.95)) -> NewCa
                         records, _v = _load_names(cdn, staged, None)
                         nc.notes.append("Upcoming names from the staged Localisation_EN")
                         session._staged_names = records
-                except Exception as exc:                # noqa: BLE001
+                except Exception as exc:
                     nc.warnings.append(f"Couldn't read the upcoming cars' names: {short_error(exc)}")
         else:
             nc.notes.append("Nothing is staged for the next update right now")
-    except Exception as exc:                            # noqa: BLE001
+    except Exception as exc:
         nc.warnings.append(f"Couldn't read the announced branches: {short_error(exc)}")
 
-    # 2. new in this game version
     report("Comparing with the previous game version", frac[0] + span * 0.7)
     try:
         prev = previous_release(cdn, database)
@@ -379,7 +347,7 @@ def find_new_cars(session: Session, report: Progress, frac=(0.7, 0.95)) -> NewCa
             older = cdn.get_database(version=prev[1])
             nc.recent = sorted(live - set(car_keys(older)))
             nc.notes.append(f"New since {prev[0]} (database {prev[1]}): {len(nc.recent)} car(s)")
-    except Exception as exc:                            # noqa: BLE001
+    except Exception as exc:
         nc.warnings.append(f"Couldn't compare with the previous game version: {short_error(exc)}")
     return nc
 
@@ -397,8 +365,6 @@ def apply_new_cars(session: Session, nc: NewCars) -> None:
 
 
 def open_session(settings: Settings, progress: Optional[Progress] = None) -> Session:
-    """Connect, load the database and the names, and (with a Player ID) look for new cars.
-    Never raises for network trouble: problems are collected in ``session.warnings``."""
     report = progress or (lambda text, frac: None)
     session = Session()
     connect(settings, session, report)

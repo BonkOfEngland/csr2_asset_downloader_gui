@@ -1,5 +1,3 @@
-"""Colours and the Qt style sheet: black / grey with #740000 accents, like CSR2 Workshop."""
-
 from __future__ import annotations
 
 import sys
@@ -17,7 +15,7 @@ MUTED = "#8f8f8f"
 ACCENT = "#740000"
 ACCENT_HOVER = "#8c0b0b"
 ACCENT_PRESSED = "#5c0000"
-ACCENT_TEXT = "#ff6b6b"      # accent colour readable as text on black
+ACCENT_TEXT = "#ff6b6b"
 OK = "#7fcf8a"
 ERR = "#ff7b72"
 WARN = "#e8b85c"
@@ -38,7 +36,6 @@ QWidget {{ background: transparent; color: {TEXT}; font-family: "{FONT}"; font-s
 QMainWindow, #Root {{ background: {BG}; }}
 QToolTip {{ background: {SURFACE_3}; color: {TEXT}; border: 1px solid {BORDER}; padding: 4px 6px; }}
 
-/* sidebar */
 #Sidebar {{ background: {SIDEBAR}; border-right: 1px solid {BORDER}; }}
 #Brand {{ font-size: 15pt; font-weight: 800; letter-spacing: 1px; }}
 #BrandSub {{ color: {ACCENT_TEXT}; font-size: 8pt; font-weight: 700; letter-spacing: 3px; }}
@@ -50,7 +47,6 @@ QPushButton#Nav:hover {{ background: {SURFACE_2}; color: {TEXT}; }}
 QPushButton#Nav:checked {{ background: {SURFACE_3}; color: {TEXT}; border-left: 3px solid {ACCENT}; }}
 #SideFoot {{ color: {MUTED}; font-size: 8pt; }}
 
-/* cards and text */
 #Card {{ background: {SURFACE}; border: 1px solid {BORDER}; border-radius: 12px; }}
 #PageTitle {{ font-size: 17pt; font-weight: 700; }}
 #Muted, QLabel[muted="true"] {{ color: {MUTED}; }}
@@ -58,7 +54,6 @@ QPushButton#Nav:checked {{ background: {SURFACE_3}; color: {TEXT}; border-left: 
 #CarTitle {{ font-size: 13pt; font-weight: 700; }}
 #Mono {{ font-family: "{MONO}"; color: {MUTED}; }}
 
-/* inputs */
 QLineEdit, QPlainTextEdit, QComboBox {{
     background: {SURFACE_2}; border: 1px solid {BORDER}; border-radius: 8px;
     padding: 7px 10px; selection-background-color: {ACCENT};
@@ -70,7 +65,6 @@ QComboBox QAbstractItemView {{
     background: {SURFACE_2}; border: 1px solid {BORDER}; selection-background-color: {ACCENT};
 }}
 
-/* buttons */
 QPushButton {{
     background: {SURFACE_3}; border: 1px solid {BORDER}; border-radius: 8px;
     padding: 8px 14px; font-weight: 600;
@@ -89,7 +83,6 @@ QPushButton#Chip {{ background: {SURFACE_2}; border: 1px solid #3a3a3a; border-r
 QPushButton#Chip:hover {{ background: {SURFACE_3}; border-color: {ACCENT_HOVER}; }}
 QPushButton#Chip:pressed {{ background: {ACCENT_PRESSED}; border-color: {ACCENT_HOVER}; }}
 
-/* option cards (setup) */
 QPushButton#Choice {{
     text-align: left; padding: 16px; border-radius: 12px; background: {SURFACE_2};
     border: 2px solid {BORDER}; font-weight: 500;
@@ -97,14 +90,12 @@ QPushButton#Choice {{
 QPushButton#Choice:hover {{ border-color: #4a4a4a; }}
 QPushButton#Choice:checked {{ border-color: {ACCENT_HOVER}; background: #1f1414; }}
 
-/* checks */
 QCheckBox {{ spacing: 8px; }}
 QCheckBox::indicator {{ width: 16px; height: 16px; border-radius: 4px; border: 1px solid #4a4a4a;
     background: {SURFACE_2}; }}
 QCheckBox::indicator:checked {{ background: {ACCENT}; border-color: {ACCENT_HOVER};
     image: url("{CHECK}"); }}
 
-/* list */
 QListView {{ background: {SURFACE}; border: 1px solid {BORDER}; border-radius: 12px; padding: 4px; }}
 QScrollBar:vertical {{ background: transparent; width: 10px; margin: 4px 2px; }}
 QScrollBar::handle:vertical {{ background: #3a3a3a; border-radius: 3px; min-height: 30px; }}
@@ -113,13 +104,11 @@ QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page, QScrollBar::su
     height: 0; background: none; }}
 QScrollBar:horizontal {{ height: 0; }}
 
-/* progress + status */
 QProgressBar {{ background: {SURFACE_3}; border: none; border-radius: 3px; max-height: 6px; }}
 QProgressBar::chunk {{ background: {ACCENT_HOVER}; border-radius: 3px; }}
 #StatusBar {{ background: {SIDEBAR}; border-top: 1px solid {BORDER}; }}
 #Log {{ font-family: "{MONO}"; font-size: 9pt; background: {SURFACE}; border: none;
     border-top: 1px solid {BORDER}; border-radius: 0; }}
-/* asset tables */
 QTreeWidget {{ background: {SURFACE}; border: 1px solid {BORDER}; border-radius: 12px; padding: 4px;
     alternate-background-color: #1e1e1e; }}
 QTreeWidget::item {{ padding: 5px 2px; border: none; }}

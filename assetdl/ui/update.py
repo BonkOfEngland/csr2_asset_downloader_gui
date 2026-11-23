@@ -1,5 +1,3 @@
-"""The update dialog: what's new, then download -> install -> restart in place."""
-
 from __future__ import annotations
 
 import threading
@@ -120,13 +118,13 @@ class UpdateDialog(QDialog):
     def _install(self):
         try:
             exe = updater.install(self.new_file)
-        except Exception as exc:                               # noqa: BLE001
+        except Exception as exc:
             self._failed(f"couldn't replace the program: {exc}")
             return
         self.status.setText(f"Updated to {self.info.version}. Restarting …")
         try:
             updater.restart(exe)
-        except Exception as exc:                               # noqa: BLE001
+        except Exception as exc:
             self.status.setText(f"Updated to {self.info.version}. Start the app again to use it ({exc}).")
             self.go_btn.setText("Close")
             self.go_btn.setEnabled(True)

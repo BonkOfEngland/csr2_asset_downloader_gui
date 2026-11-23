@@ -1,6 +1,3 @@
-"""First-run setup, after the splash: how cars are listed, where the files go, and the Player ID that unlocks
-New Cars."""
-
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
@@ -70,7 +67,6 @@ class SetupDialog(QDialog):
         root.addLayout(nav)
         self._go(0)
 
-    # pages
     def _names_page(self) -> QWidget:
         page = QWidget()
         lay = QVBoxLayout(page)
@@ -141,7 +137,6 @@ class SetupDialog(QDialog):
         lay.addStretch(1)
         return page
 
-    # navigation
     def _go(self, index: int):
         index = max(0, min(self.stack.count() - 1, index))
         self.page = index

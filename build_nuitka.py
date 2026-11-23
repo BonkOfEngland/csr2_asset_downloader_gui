@@ -1,14 +1,3 @@
-"""Compile the app with Nuitka (Python -> C -> native code) into one file.
-
-    python build_nuitka.py            one file:  dist-nuitka/CSR2 Asset Downloader(.exe)
-    python build_nuitka.py --folder   a folder instead (starts faster, nothing to unpack)
-
-Needs a C compiler. On Windows, Nuitka offers to download MinGW64 the first time if you have neither
-it nor Visual Studio's "Desktop development with C++"; this script says yes for you. On Linux it
-needs gcc and patchelf (CachyOS: sudo pacman -S gcc patchelf).
-The first build takes several minutes; later ones are faster.
-"""
-
 from __future__ import annotations
 
 import subprocess
@@ -17,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
-from assetdl import APP_NAME, AUTHOR, VERSION   # noqa: E402
+from assetdl import APP_NAME, AUTHOR, VERSION
 
 OUT = ROOT / "dist-nuitka"
 
@@ -30,10 +19,9 @@ def main() -> int:
         "--enable-plugin=pyside6",
         "--include-qt-plugins=sensible,imageformats",
         "--include-package=csr2cdn",
-        "--include-package-data=csr2cdn",          # block_ids.json
+        "--include-package-data=csr2cdn",
         "--include-module=lz4.block",
         "--include-data-dir=assets=assets",
-        # optional parts of dependencies this app never touches
         "--nofollow-import-to=tkinter,unittest,pydoc,numpy,pandas,PIL,UnityPy,cryptography,pytest",
         "--assume-yes-for-downloads",
         f"--output-dir={OUT}",
@@ -45,7 +33,6 @@ def main() -> int:
         "--remove-output",
     ]
     if not folder:
-        # unpack to a fixed per-version folder so repeat starts reuse it instead of unpacking again
         args.append("--onefile-tempdir-spec={CACHE_DIR}/CSR2AssetDownloader/" + VERSION)
     if sys.platform == "win32":
         args.append("--windows-console-mode=disable")
