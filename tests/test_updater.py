@@ -88,31 +88,6 @@ class CheckTests(unittest.TestCase):
             U.check(session=FakeSession(FakeResponse(403)))
 
 
-class CommitNotesTests(unittest.TestCase):
-    def commits(self):
-        return [{"sha": "aaaaaaa1", "html_url": "https://c/a", "commit": {"message": "Fix __init__.py\n\nMore *details*",
-                                                                         "author": {"date": "2026-11-20T10:00:00Z"}}},
-                {"sha": "bbbbbbb2", "html_url": "https://c/b", "commit": {"message": "Newest change",
-                                                                         "author": {"date": "2026-11-23T10:00:00Z"}}}]
-
-    def test_newest_first(self):
-        commits, more = U.parse_commits(self.commits(), 3)
-        self.assertEqual([c["title"] for c in commits], ["Newest change", "Fix __init__.py"])
-        self.assertEqual(commits[1]["body"], ["More *details*"])
-        self.assertEqual((commits[0]["sha"], commits[0]["date"]), ("bbbbbbb", "23 Nov 2026"))
-        self.assertEqual(more, 1)
-
-    def test_check_uses_commits_then_falls_back(self):
-        newer = bump(VERSION)
-        rel = release("v" + newer)
-        info = U.check(session=FakeSession(FakeResponse(data=rel),
-                                           FakeResponse(data={"commits": self.commits(), "total_commits": 2})))
-        self.assertEqual(info.commits[0]["title"], "Newest change")
-        info = U.check(session=FakeSession(FakeResponse(data=rel), FakeResponse(404)))
-        self.assertEqual(info.commits, [])
-        self.assertIn("What's new", info.notes)
-
-
 class DownloadTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())

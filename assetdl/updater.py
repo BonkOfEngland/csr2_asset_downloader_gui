@@ -8,15 +8,13 @@ import subprocess
 import sys
 import tarfile
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
 from assetdl import APP_NAME, REPO, VERSION
 
 API = "https://api.github.com/repos/{repo}/releases/latest"
-COMPARE_API = "https://api.github.com/repos/{repo}/compare/{base}...{head}"
-MAX_COMMITS = 50
 WINDOWS_ASSET = "CSR2-Asset-Downloader-windows.exe"
 LINUX_ASSET = "CSR2-Asset-Downloader-linux-x86_64.tar.gz"
 LINUX_MEMBER = APP_NAME
@@ -43,8 +41,6 @@ class UpdateInfo:
     asset_url: str = ""
     size: int = 0
     sha256: str = ""
-    commits: list = field(default_factory=list)
-    more_commits: int = 0
 
 
 def parse_version(text: str) -> tuple:
@@ -111,39 +107,7 @@ def check(timeout: float = 10.0, session=None) -> Optional[UpdateInfo]:
     info = release_from_json(r.json())
     if not is_newer(info.version):
         return None
-    info.commits, info.more_commits = commit_notes(info.tag, session=s, timeout=timeout)
     return info
-
-
-def parse_commits(commits: list, total: int = 0) -> tuple[list, int]:
-    from datetime import datetime
-    out = []
-    for c in reversed(commits[-MAX_COMMITS:]):
-        commit = c.get("commit") or {}
-        lines = [l.rstrip() for l in str(commit.get("message") or "").strip().splitlines()]
-        if not lines:
-            continue
-        when = str((commit.get("author") or {}).get("date") or "")
-        try:
-            when = datetime.fromisoformat(when.replace("Z", "+00:00")).strftime("%d %b %Y")
-        except ValueError:
-            when = ""
-        out.append({"title": lines[0], "body": [l for l in lines[1:] if l.strip()],
-                    "sha": str(c.get("sha") or "")[:7], "url": str(c.get("html_url") or ""), "date": when})
-    return out, max(0, total - min(len(commits), MAX_COMMITS))
-
-
-def commit_notes(tag: str, session=None, timeout: float = 10.0) -> tuple[list, int]:
-    s = session or _session()
-    try:
-        r = s.get(COMPARE_API.format(repo=REPO, base=f"v{VERSION}", head=tag), timeout=timeout,
-                  headers={"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"})
-        if r.status_code != 200:
-            return [], 0
-        data = r.json()
-        return parse_commits(data.get("commits") or [], int(data.get("total_commits") or 0))
-    except Exception:
-        return [], 0
 
 
 def compiled() -> bool:

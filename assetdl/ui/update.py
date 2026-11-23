@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import threading
-from html import escape
 
 from PySide6.QtCore import QThreadPool, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import (QApplication, QDialog, QHBoxLayout, QProgressBar, QPushButton, QTextBrowser,
-                               QVBoxLayout)
+from PySide6.QtWidgets import (QApplication, QDialog, QHBoxLayout, QProgressBar, QPushButton, QVBoxLayout)
 
 from assetdl import APP_NAME, VERSION
 from assetdl.assets import human_size
@@ -15,20 +13,6 @@ from assetdl import updater
 from assetdl.ui import theme
 from assetdl.ui.widgets import label
 from assetdl.ui.workers import Task
-
-
-def commits_html(commits: list, more: int = 0) -> str:
-    parts = []
-    for c in commits:
-        meta = " · ".join(p for p in (
-            f'<a href="{escape(c["url"], quote=True)}" style="color:{theme.ACCENT_TEXT}; text-decoration:none;">'
-            f'{escape(c["sha"])}</a>' if c["url"] and c["sha"] else escape(c["sha"]), escape(c["date"])) if p)
-        lines = [f"<b>{escape(c['title'])}</b>"] + [escape(line) for line in c["body"]]
-        lines.append(f'<span style="color:{theme.MUTED}; font-size:8pt;">{meta}</span>')
-        parts.append(f'<p style="margin-top:0; margin-bottom:14px;">{"<br>".join(lines)}</p>')
-    if more:
-        parts.append(f'<p style="color:{theme.MUTED};">…and {more} earlier change{"s" if more != 1 else ""}.</p>')
-    return "".join(parts)
 
 
 class UpdateDialog(QDialog):
@@ -40,25 +24,15 @@ class UpdateDialog(QDialog):
         self._signals = None
         self.setWindowTitle(f"{APP_NAME} - update")
         self.setObjectName("Root")
-        self.setMinimumSize(560, 440)
+        self.setMinimumWidth(560)
         self.setStyleSheet(f"QDialog#Root {{ background: {theme.BG}; }}")
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(28, 24, 28, 20)
         lay.setSpacing(12)
-        lay.addWidget(label("UPDATE AVAILABLE", "Section"))
+        lay.addWidget(label("NEW UPDATE DETECTED", "Section"))
         lay.addWidget(label(f"Version {info.version} is out", "PageTitle"))
-        lay.addWidget(label(f"You have {VERSION}.", "Muted"))
-        lay.addWidget(label("WHAT'S CHANGED", "Section"))
-        notes = QTextBrowser()
-        notes.setOpenExternalLinks(True)
-        if info.commits:
-            notes.setHtml(commits_html(info.commits, info.more_commits))
-        else:
-            notes.setMarkdown(info.notes or "_No details._")
-        notes.setStyleSheet(f"QTextBrowser {{ background: {theme.SURFACE}; border: 1px solid {theme.BORDER}; "
-                            "border-radius: 10px; padding: 8px; }")
-        lay.addWidget(notes, 1)
+        lay.addWidget(label(f"Current Version: {VERSION}", "Muted"))
 
         self.status = label("", "Muted", wrap=True)
         lay.addWidget(self.status)
