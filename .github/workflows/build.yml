@@ -1,0 +1,112 @@
+name: Build
+
+# Every push tests the app and builds it with Nuitka on Windows and Linux. The files are attached to the run
+# (Actions > the run > Artifacts).
+#
+# Releases: when a push to main carries a version (VERSION in assetdl/__init__.py) that hasn't been released yet,
+# both builds are published as a GitHub Release "v<version>". So to release: change VERSION, commit, push.
+# Pushes that keep the same version only build. "Run workflow" on the Actions tab does the same check by hand.
+#
+# The app's updater (assetdl/updater.py) reads the latest release and picks its file BY NAME: keep the
+# CSR2-Asset-Downloader-windows.exe / CSR2-Asset-Downloader-linux-x86_64.tar.gz names below as they are.
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install
+        run: python -m pip install -r requirements.txt nuitka ordered-set zstandard
+      - name: Linux build tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y patchelf ccache libegl1 libxkbcommon0
+      - name: Test
+        run: python -m unittest discover -s tests -v
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - name: Nuitka cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/Nuitka
+            ~/AppData/Local/Nuitka/Nuitka/Cache
+          key: nuitka-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: nuitka-${{ runner.os }}-
+      - name: Build (Nuitka)
+        run: python build_nuitka.py
+      - name: Package
+        # one file per build, each with its own name, ready to attach to a release
+        shell: bash
+        run: |
+          NAME="CSR2 Asset Downloader"
+          mkdir -p upload
+          case "$RUNNER_OS" in
+            Windows)
+              cp "dist-nuitka/$NAME.exe" "upload/CSR2-Asset-Downloader-windows.exe" ;;
+            Linux)
+              # a tar keeps the "can run" permission that a zip would lose
+              tar -czf "upload/CSR2-Asset-Downloader-linux-x86_64.tar.gz" -C dist-nuitka "$NAME" ;;
+          esac
+          ls -la upload
+      - uses: actions/upload-artifact@v6
+        with:
+          name: CSR2-Asset-Downloader-${{ runner.os }}
+          path: upload/*
+
+  release:
+    needs: build                       # only when both builds worked
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Version
+        id: version
+        run: |
+          VERSION=$(python3 -c "import re; print(re.search(r'VERSION = \"([^\"]+)\"', open('assetdl/__init__.py').read()).group(1))")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "v$VERSION is already released; change VERSION in assetdl/__init__.py to make a new release."
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/download-artifact@v6
+        if: steps.version.outputs.new == 'true'
+        with:
+          path: release
+          merge-multiple: true
+      - name: Publish the release
+        if: steps.version.outputs.new == 'true'
+        run: |
+          V=${{ steps.version.outputs.version }}
+          cat > notes.md <<NOTES
+          ## Downloads
+
+          | System | File |
+          |---|---|
+          | Windows | \`CSR2-Asset-Downloader-windows.exe\` |
+          | Linux | \`CSR2-Asset-Downloader-linux-x86_64.tar.gz\` (unpack, then run \`CSR2 Asset Downloader\`) |
+
+          Windows SmartScreen may warn the first time because the app isn't code-signed: **More info > Run anyway**.
+          NOTES
+          gh release create "v$V" release/* \
+            --title "CSR2 Asset Downloader $V" \
+            --notes-file notes.md \
+            --generate-notes \
+            --target "$GITHUB_SHA"

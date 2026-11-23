@@ -1,0 +1,4 @@
+PySide6-Essentials>=6.7
+csr2-cdn[stores]>=0.7.3
+lz4>=4.0
+requests>=2.25
